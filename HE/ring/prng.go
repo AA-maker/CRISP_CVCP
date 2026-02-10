@@ -2,7 +2,7 @@ package ring
 
 import (
 	"encoding/binary"
-	"github.com/ldsec/lattigo/utils"
+	"github.com/tuneinsight/lattigo/utils"
 	"math/bits"
 )
 

@@ -2,7 +2,7 @@ package ckks
 
 import (
 	"fmt"
-	"github.com/ldsec/lattigo/ring"
+	"github.com/tuneinsight/lattigo/ring"
 	"testing"
 )
 

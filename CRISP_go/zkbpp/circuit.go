@@ -7,9 +7,9 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	cr "github.com/ldsec/CRISP-private/ring"
-	lr "github.com/ldsec/lattigo/ring"
-	"github.com/ldsec/lattigo/utils"
+	cr "github.com/ldsec/crisp/CRISP_go/ring"
+	lr "github.com/tuneinsight/lattigo/ring"
+	"github.com/tuneinsight/lattigo/utils"
 )
 
 //CircuitDescription represents a function acting as a Circuit description
@@ -50,7 +50,7 @@ type Circuit struct {
 	Description CircuitDescription
 
 	//rings
-	Rq *lr.Ring
+	Rq *lr.Context
 	z2 *z2Ring
 	*cr.Ring
 
@@ -68,12 +68,12 @@ type Circuit struct {
 
 	//randomness
 	seeds [3][]byte
-	rand  [3]*utils.KeyedPRNG
+	rand  [3]*utils.PRNG
 }
 
 //NewCircuit instantiates a new circuit with given ring
 func NewCircuit(ring *cr.Ring) *Circuit {
-	rq, _ := lr.NewRing(1<<DefaultParamsCRISP().LogN(), DefaultParamsCRISP().Qi())
+	rq, _ := lr.NewContextWithParams(1<<DefaultParamsCRISP().LogN, DefaultParamsCRISP().Qi)
 	return &Circuit{
 		Ring: ring,
 		z2:   &z2Ring{bitlen: new(big.Int).Sub(ring.Q, big.NewInt(1)).BitLen()},
@@ -118,7 +118,7 @@ func (c *Circuit) preprocessMode() {
 //generateRandomZqElem generates a random Zq number with prng index k
 func (c *Circuit) generateRandomZqElem(k int) (out *big.Int) {
 	tmp := make([]byte, (c.Q.BitLen()/8)+1)
-	c.rand[k].Clock(tmp)
+	copy(tmp, c.rand[k].Clock())
 	out = big.NewInt(0)
 	out.SetBytes(tmp)
 	out = c.Red(out)
@@ -132,7 +132,7 @@ func (c *Circuit) generateRandomZ2Elem(k int) (out *big.Int) {
 		len_b = c.z2.bitlen / 8
 	}
 	tmp := make([]byte, len_b)
-	c.rand[k].Clock(tmp)
+	copy(tmp, c.rand[k].Clock())
 	out = big.NewInt(0)
 	out.SetBytes(tmp)
 	out = c.z2.Reduce(out)
@@ -142,7 +142,7 @@ func (c *Circuit) generateRandomZ2Elem(k int) (out *big.Int) {
 //generateRandomZqElem generates a random Z2 number of 32 bits with prng index k
 func (c *Circuit) generateRandomZ32Elem(k int) (out *big.Int) {
 	tmp := make([]byte, 4)
-	c.rand[k].Clock(tmp)
+	copy(tmp, c.rand[k].Clock())
 	out = big.NewInt(0)
 	out.SetBytes(tmp)
 	return
@@ -151,27 +151,27 @@ func (c *Circuit) generateRandomZ32Elem(k int) (out *big.Int) {
 //generateRandomUint32 generates a random uint32 with prng index k
 func (c *Circuit) generateRandomUint32(k int) (out uint32) {
 	tmp := make([]byte, 4)
-	c.rand[k].Clock(tmp)
+	copy(tmp, c.rand[k].Clock())
 	out = binary.BigEndian.Uint32(tmp)
 	return
 }
 
 //generateSeeds generates the seeds and prng for the players, given a main prng
-func (c *Circuit) generateSeeds(prngMain *utils.KeyedPRNG) {
+func (c *Circuit) generateSeeds(prngMain *utils.PRNG) {
 
 	//generate seeds
 	c.seeds[0] = make([]byte, SECURITY_LEVEL)
 	c.seeds[1] = make([]byte, SECURITY_LEVEL)
 	c.seeds[2] = make([]byte, SECURITY_LEVEL)
 
-	prngMain.Clock(c.seeds[0])
-	prngMain.Clock(c.seeds[1])
-	prngMain.Clock(c.seeds[2])
+	copy(c.seeds[0], prngMain.Clock())
+	copy(c.seeds[1], prngMain.Clock())
+	copy(c.seeds[2], prngMain.Clock())
 
 	//initiate PRNG
-	c.rand[0], _ = utils.NewKeyedPRNG(c.seeds[0])
-	c.rand[1], _ = utils.NewKeyedPRNG(c.seeds[1])
-	c.rand[2], _ = utils.NewKeyedPRNG(c.seeds[2])
+	c.rand[0], _ = utils.NewPRNG(c.seeds[0])
+	c.rand[1], _ = utils.NewPRNG(c.seeds[1])
+	c.rand[2], _ = utils.NewPRNG(c.seeds[2])
 }
 
 //generateShares generates the shares for all input ZKBVar and returns the variables
@@ -281,7 +281,7 @@ func (c *Circuit) resetAll() {
 
 	c.resetViews()
 	c.seeds = [3][]byte{}
-	c.rand = [3]*utils.KeyedPRNG{}
+	c.rand = [3]*utils.PRNG{}
 	c.preprocessing = offset{}
 
 }
@@ -315,7 +315,7 @@ func (c *Circuit) verify(input []ZKBVar, e int) (output []ZKBVar) {
 }
 
 //preprocess runs a circuit c with preprocessing gates, and master prng
-func (c *Circuit) preprocess(input []ZKBVar, prng *utils.KeyedPRNG) {
+func (c *Circuit) preprocess(input []ZKBVar, prng *utils.PRNG) {
 	c.preprocessMode()
 
 	//generating seeds

@@ -1,7 +1,7 @@
 package zkbpp
 
 import (
-	lr "github.com/ldsec/lattigo/ring"
+	lr "github.com/tuneinsight/lattigo/ring"
 )
 
 type rqgate func([]*lr.Poly, []*lr.Poly, *Circuit) []*lr.Poly

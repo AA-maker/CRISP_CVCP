@@ -3,7 +3,7 @@
 package ckks
 
 import (
-	"github.com/ldsec/lattigo/ring"
+	"github.com/tuneinsight/lattigo/ring"
 	"math"
 	"math/big"
 )

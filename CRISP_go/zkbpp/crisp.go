@@ -1,8 +1,8 @@
 package zkbpp
 
 import (
-	"github.com/ldsec/lattigo/ckks"
-	lr "github.com/ldsec/lattigo/ring"
+	"github.com/tuneinsight/lattigo/ckks"
+	lr "github.com/tuneinsight/lattigo/ring"
 )
 
 //DefaultParamsCRISP returns the default parameters of a CKKS scheme

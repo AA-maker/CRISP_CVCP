@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"time"
-	"github.com/ldsec/lattigo/ckks"
+	"github.com/tuneinsight/lattigo/ckks"
 )
 
 func randomFloat(min, max float64) float64 {
@@ -63,7 +63,7 @@ func mainfunk() {
 		mask[i] = complex(float64(3),0)
 	}
 
-	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN(), ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
+	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN, ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
 
 	fmt.Println()
 	fmt.Printf("Values     : %6f %6f %6f %6f...\n", values[0], values[1], values[2], values[3])
@@ -169,7 +169,7 @@ func mainfunk() {
 		mask[i] = complex(float64(i),0)
 	}
 
-	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN(), ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
+	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN, ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
 
 	fmt.Println()
 	fmt.Printf("Values     : %6f %6f %6f %6f...\n", values[0], values[1], values[2], values[3])
@@ -257,7 +257,7 @@ func mainDS() {
 
 	// Create mask with weights
 
-	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN(), ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
+	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN, ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
 
 	fmt.Println()
 	fmt.Printf("Values     : %6f %6f %6f %6f...\n", values[0], values[1], values[2], values[3])
@@ -349,7 +349,7 @@ func mainDist() {
 	// Get Vmax
 	// Populate X
 
-	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN(), ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
+	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN, ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
 
 	fmt.Println()
 	fmt.Printf("Values     : %6f %6f %6f %6f...\n", values[0], values[1], values[2], values[3])

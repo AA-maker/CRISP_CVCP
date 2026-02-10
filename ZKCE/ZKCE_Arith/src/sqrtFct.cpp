@@ -1,3 +1,5 @@
+#include "Scheme.h"
+
 void Scheme::sqrt(Ciphertext& cipher, long logp) {
 	Ciphertext cipher2;
 	square(cipher2, cipher);
@@ -12,7 +14,8 @@ void Scheme::sqrt(Ciphertext& cipher, long logp) {
 	reScaleByAndEqual(cipher8, logp); // cipher4.logq : logq -2logp
 
 
-	RR c = 45/144; //a0/a1
+	RR c;
+	c = 45.0/144.0; //a0/a1
 	Ciphertext cipher01;
 	addConst(cipher01, cipher, c, logp); // cipher01.logq : logq
 

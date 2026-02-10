@@ -8,6 +8,9 @@ include_directories(run)
 include_directories(src)
 include_directories(NTL)
 
-add_executable(HEAAN
-        run/runMPCmult.cpp
-)
+file(GLOB SRC_FILES "src/*.cpp")
+
+#add_executable(HEAAN run/runMPCmult.cpp ${SRC_FILES})
+add_library(zkce_arith STATIC ${SRC_FILES})
+
+target_link_libraries(zkce_arith gmp)

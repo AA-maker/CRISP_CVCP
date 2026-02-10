@@ -43,17 +43,23 @@ Ciphertext* SerializationUtils::readCiphertext(string path) {
 
 	long np = ceil(((double)logq + 1)/8);
 	unsigned char* bytes = new unsigned char[np];
-	Ciphertext cipher(logp, logq, n);
-	for (long i = 0; i < N; ++i) {
-		fin.read(reinterpret_cast<char*>(bytes), np);
-		ZZFromBytes(cipher.ax[i], bytes, np);
-	}
-	for (long i = 0; i < N; ++i) {
-		fin.read(reinterpret_cast<char*>(bytes), np);
-		ZZFromBytes(cipher.bx[i], bytes, np);
-	}
-	fin.close();
-	return &cipher;
+    // 1. Allocate on Heap using 'new'
+    Ciphertext* cipher = new Ciphertext(logp, logq, n); 
+    
+    for (long i = 0; i < N; ++i) {
+        fin.read(reinterpret_cast<char*>(bytes), np);
+        // 2. Use '->' instead of '.' to access members
+        ZZFromBytes(cipher->ax[i], bytes, np); 
+    }
+    for (long i = 0; i < N; ++i) {
+        fin.read(reinterpret_cast<char*>(bytes), np);
+        // 3. Use '->' instead of '.'
+        ZZFromBytes(cipher->bx[i], bytes, np); 
+    }
+    fin.close();
+    
+    // 4. Return the pointer directly (no '&')
+    return cipher;
 }
 
 void SerializationUtils::writeKey(Key* key, string path) {
@@ -65,12 +71,19 @@ void SerializationUtils::writeKey(Key* key, string path) {
 }
 
 Key* SerializationUtils::readKey(string path) {
-	Key key;
-	fstream fin;
-	fin.open(path, ios::binary|ios::in);
-	fin.read(reinterpret_cast<char*>(key.rax), Nnprimes*sizeof(uint64_t));
-	fin.read(reinterpret_cast<char*>(key.rbx), Nnprimes*sizeof(uint64_t));
-	fin.close();
-	return &key;
+    // 1. Allocate on Heap
+    Key* key = new Key(); 
+    
+    fstream fin;
+    fin.open(path, ios::binary|ios::in);
+    
+    // 2. Use '->' instead of '.'
+    fin.read(reinterpret_cast<char*>(key->rax), Nnprimes*sizeof(uint64_t));
+    fin.read(reinterpret_cast<char*>(key->rbx), Nnprimes*sizeof(uint64_t));
+    
+    fin.close();
+    
+    // 3. Return the pointer directly
+    return key; 
 }
 

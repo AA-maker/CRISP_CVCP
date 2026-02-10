@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	. "github.com/ldsec/CRISP-private/ring"
-	"github.com/ldsec/CRISP-private/zkbpp"
+	. "github.com/ldsec/crisp/CRISP_go/ring"
+	"github.com/ldsec/crisp/CRISP_go/zkbpp"
 )
 
 func setupDummy() (*zkbpp.Circuit, []zkbpp.ZKBVar) {

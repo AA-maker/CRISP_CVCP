@@ -1,7 +1,7 @@
 package ckks
 
 import (
-	"github.com/ldsec/lattigo/ring"
+	"github.com/tuneinsight/lattigo/ring"
 )
 
 // Encreyptor is a struct used to encrypt plaintext and storing the public-key and/or secret-key.

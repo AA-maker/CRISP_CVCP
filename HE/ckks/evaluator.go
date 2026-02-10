@@ -2,8 +2,8 @@ package ckks
 
 import (
 	"errors"
-	"github.com/ldsec/lattigo/ring"
-	"github.com/ldsec/lattigo/utils"
+	"github.com/tuneinsight/lattigo/ring"
+	"github.com/tuneinsight/lattigo/utils"
 	"math"
 )
 

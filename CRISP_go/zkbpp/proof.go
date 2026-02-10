@@ -8,8 +8,8 @@ import (
 	mr "math/rand"
 	"time"
 
-	lr "github.com/ldsec/lattigo/ring"
-	"github.com/ldsec/lattigo/utils"
+	lr "github.com/tuneinsight/lattigo/ring"
+	"github.com/tuneinsight/lattigo/utils"
 )
 
 //Security level of seeds, in bytes. 128 bits = 16 bytes, 256 bits = 32 bytes
@@ -91,7 +91,7 @@ func Preprocess(c *Circuit, input []ZKBVar, nbIterations int) (ctx *KKWContext, 
 	//masterSeed := []byte{43}
 	masterSeed := make([]byte, SECURITY_LEVEL)
 	rand.Read(masterSeed)
-	masterPRNG, _ := utils.NewKeyedPRNG(masterSeed)
+	masterPRNG, _ := utils.NewPRNG(masterSeed)
 
 	//prepare context
 	ctx = &KKWContext{
@@ -106,7 +106,7 @@ func Preprocess(c *Circuit, input []ZKBVar, nbIterations int) (ctx *KKWContext, 
 	}
 
 	randomness := make([]byte, SECURITY_LEVEL)
-	masterPRNG.Clock(ctx.salt)
+	copy(ctx.salt, masterPRNG.Clock())
 
 	omegaCom := make([]byte, 0)
 	gammaCom := make([]byte, 0)
@@ -114,14 +114,14 @@ func Preprocess(c *Circuit, input []ZKBVar, nbIterations int) (ctx *KKWContext, 
 	//generate triples and commit to it
 	for i := 0; i < nbIterations; i++ {
 		iterationSeed := make([]byte, SECURITY_LEVEL)
-		masterPRNG.Clock(iterationSeed)
-		iterationPrng, _ := utils.NewKeyedPRNG(iterationSeed)
+		copy(iterationSeed, masterPRNG.Clock())
+		iterationPrng, _ := utils.NewPRNG(iterationSeed)
 		c.preprocess(input, iterationPrng)
 		ctx.offsets[i] = c.preprocessing
 		ctx.seeds[i] = iterationSeed
 
 		//commit to input offset (phi)
-		masterPRNG.Clock(randomness)
+		copy(randomness, masterPRNG.Clock())
 		inputOffsetCom := computeOffsetCommit(c.preprocessing.phis, randomness, ctx.salt)
 		omegaCom = append(omegaCom, inputOffsetCom[:]...)
 		ctx.omegaCom[i] = inputOffsetCom
@@ -131,7 +131,7 @@ func Preprocess(c *Circuit, input []ZKBVar, nbIterations int) (ctx *KKWContext, 
 		copy(ctx.omegaRand[i], randomness)
 
 		//commit to triples offset (delta)
-		iterationPrng.Clock(randomness)
+		copy(randomness, iterationPrng.Clock())
 		triplesOffsetCom := computeOffsetCommit(c.preprocessing.deltas, randomness, ctx.salt)
 
 		//save randomness for proof
@@ -139,13 +139,13 @@ func Preprocess(c *Circuit, input []ZKBVar, nbIterations int) (ctx *KKWContext, 
 		copy(ctx.gammaRand[i], randomness)
 
 		//commit to player seed
-		c.rand[0].Clock(randomness)
+		copy(randomness, c.rand[0].Clock())
 		seed1Com := computeSeedCommit(c.seeds[0], randomness, ctx.salt)
 		ctx.gammaiCom[i][0] = seed1Com
-		c.rand[1].Clock(randomness)
+		copy(randomness, c.rand[1].Clock())
 		seed2Com := computeSeedCommit(c.seeds[1], randomness, ctx.salt)
 		ctx.gammaiCom[i][1] = seed2Com
-		c.rand[2].Clock(randomness)
+		copy(randomness, c.rand[2].Clock())
 		seed3Com := computeSeedCommit(c.seeds[2], randomness, ctx.salt)
 		ctx.gammaiCom[i][2] = seed3Com
 
@@ -222,7 +222,7 @@ func Prove(c *Circuit, input []ZKBVar, ctx *KKWContext, challengesIndex, closedI
 
 		//setup circuit
 		c.preprocessing = ctx.offsets[index]
-		prng, _ := utils.NewKeyedPRNG(ctx.seeds[index])
+		prng, _ := utils.NewPRNG(ctx.seeds[index])
 		c.generateSeeds(prng)
 		//evaluate circuit
 		output = c.evaluate(input)
@@ -372,7 +372,7 @@ func Verify(p ZKBProof, kkwP KKWProof, challengesIndex, closedIndex []uint32) bo
 	//KKW Checks, open iterations
 	for i, chall := range challengesIndex {
 		iterSeed := p.kkwSeeds[i]
-		iterationPrng, _ := utils.NewKeyedPRNG(iterSeed)
+		iterationPrng, _ := utils.NewPRNG(iterSeed)
 		input := make([]ZKBVar, p.inputSize)
 		//dummy input for preprocessing, we won't care about input offset
 		for j := 0; j < p.inputSize; j++ {
@@ -381,15 +381,15 @@ func Verify(p ZKBProof, kkwP KKWProof, challengesIndex, closedIndex []uint32) bo
 		c.preprocess(input, iterationPrng)
 		//compute commits for triples
 		randomness := make([]byte, SECURITY_LEVEL)
-		iterationPrng.Clock(randomness)
+		copy(randomness, iterationPrng.Clock())
 		triplesOffsetCom := computeOffsetCommit(c.preprocessing.deltas, randomness, p.salt)
 
 		//compute commits for seeds
-		c.rand[0].Clock(randomness)
+		copy(randomness, c.rand[0].Clock())
 		seed1Com := computeSeedCommit(c.seeds[0], randomness, p.salt)
-		c.rand[1].Clock(randomness)
+		copy(randomness, c.rand[1].Clock())
 		seed2Com := computeSeedCommit(c.seeds[1], randomness, p.salt)
-		c.rand[2].Clock(randomness)
+		copy(randomness, c.rand[2].Clock())
 		seed3Com := computeSeedCommit(c.seeds[2], randomness, p.salt)
 
 		//compute gamma Commitment for this iteration
@@ -410,8 +410,8 @@ func Verify(p ZKBProof, kkwP KKWProof, challengesIndex, closedIndex []uint32) bo
 		//random generator setup
 		c.seeds[0] = p.zs[i].seeds[0]
 		c.seeds[1] = p.zs[i].seeds[1]
-		c.rand[0], _ = utils.NewKeyedPRNG(c.seeds[0])
-		c.rand[1], _ = utils.NewKeyedPRNG(c.seeds[1])
+		c.rand[0], _ = utils.NewPRNG(c.seeds[0])
+		c.rand[1], _ = utils.NewPRNG(c.seeds[1])
 
 		//view setup
 		c.views.player2 = p.zs[i].viewe1
@@ -514,9 +514,9 @@ func Verify(p ZKBProof, kkwP KKWProof, challengesIndex, closedIndex []uint32) bo
 		triplesOffsetCom := computeOffsetCommit(p.deltas[i], p.gammaRand[i], p.salt)
 
 		//check player seeds commitment
-		c.rand[0].Clock(randomness)
+		copy(randomness, c.rand[0].Clock())
 		seed1Com := computeSeedCommit(c.seeds[0], randomness, p.salt)
-		c.rand[1].Clock(randomness)
+		copy(randomness, c.rand[1].Clock())
 		seed2Com := computeSeedCommit(c.seeds[1], randomness, p.salt)
 		seed3Com := p.seedCom[i]
 

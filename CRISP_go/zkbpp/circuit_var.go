@@ -3,7 +3,7 @@ package zkbpp
 import (
 	"math/big"
 
-	lr "github.com/ldsec/lattigo/ring"
+	lr "github.com/tuneinsight/lattigo/ring"
 )
 
 //ZKBVar is a struct to represent an input variable to a Circuit.

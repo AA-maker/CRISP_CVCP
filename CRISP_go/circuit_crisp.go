@@ -3,56 +3,55 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
-	"github.com/ldsec/CRISP-private/ring"
-	"github.com/ldsec/CRISP-private/zkbpp"
-	lr "github.com/ldsec/lattigo/ring"
-	"github.com/ldsec/lattigo/utils"
+	"github.com/ldsec/crisp/CRISP_go/ring"
+	"github.com/ldsec/crisp/CRISP_go/zkbpp"
+	lr "github.com/tuneinsight/lattigo/ring"
+	"github.com/tuneinsight/lattigo/utils"
 )
 
 func runCrisp() {
 
-	//crisp circuit
-	crispRing := ring.NewRing(zkbpp.DefaultParamsCRISP().Q())
-	crispCircuit := zkbpp.NewCircuit(crispRing)
-
 	//input generation
 	params := zkbpp.DefaultParamsCRISP()
 
-	//prng for Sampler
-	prng, _ := utils.NewPRNG()
+	// Calculate the full modulus Q as the product of all Qi elements
+	Q := new(big.Int).SetUint64(1)
+	for _, qi := range params.Qi {
+		Q.Mul(Q, new(big.Int).SetUint64(qi))
+	}
 
-	//ternary with proba [1/3,1/3,1/3]
-	ternarySamplerQ1 := lr.NewTernarySampler(prng, crispCircuit.Rq, float64(1)/3, false)
-	//ternary with proba [1/4,1/2,1/4]
-	ternarySamplerQ := lr.NewTernarySampler(prng, crispCircuit.Rq, 0.5, false)
-	//uniformSampler
-	uniformSampler := lr.NewUniformSampler(prng, crispCircuit.Rq)
+	//crisp circuit
+	crispRing := ring.NewRing(Q)
+	crispCircuit := zkbpp.NewCircuit(crispRing)
+
+	//prng for Sampler
+	utils.NewPRNG(nil)
+
 	//gaussianSampler
-	gaussianSamplerQ := lr.NewGaussianSampler(prng, crispCircuit.Rq, params.Sigma(), uint64(6*params.Sigma()))
+	gaussianSamplerQ := crispCircuit.Rq.NewKYSampler(params.Sigma, int(6*params.Sigma))
 
 	//keygen
-
-	sk := ternarySamplerQ1.ReadNew()
+	sk := crispCircuit.Rq.SampleTernaryNew(float64(1) / 3)
 
 	//pk = [-a*s + e, a]
 	pk := [2]*lr.Poly{crispCircuit.Rq.NewPoly(), crispCircuit.Rq.NewPoly()}
-	e := gaussianSamplerQ.ReadNew()
-	pk[1] = uniformSampler.ReadNew()
+	e := gaussianSamplerQ.SampleNew()
+	pk[1] = crispCircuit.Rq.NewUniformPoly()
 
 	crispCircuit.Rq.MulCoeffs(sk, pk[1], pk[0])
 	crispCircuit.Rq.Neg(pk[0], pk[0])
 	crispCircuit.Rq.Add(pk[0], e, pk[0])
 
 	//sample the encryption noises
-
 	r0 := crispCircuit.Rq.NewPoly()
 	e0 := crispCircuit.Rq.NewPoly()
 	e1 := crispCircuit.Rq.NewPoly()
 
-	ternarySamplerQ.Read(r0)
-	gaussianSamplerQ.Read(e0)
-	gaussianSamplerQ.Read(e1)
+	crispCircuit.Rq.SampleTernary(r0, 0.5)
+	gaussianSamplerQ.Sample(e0)
+	gaussianSamplerQ.Sample(e1)
 
 	//bdop parameters
 	n := 1
@@ -61,20 +60,18 @@ func runCrisp() {
 	//rc sampling
 	rc := make([]*lr.Poly, k)
 	for j := 0; j < len(rc); j++ {
-		rc[j] = crispCircuit.Rq.NewPoly()
-		gaussianSamplerQ.Read(rc[j])
+		rc[j] = gaussianSamplerQ.SampleNew()
 	}
 
 	//public parameters, a1 and a2 sampling
 	a1 := make([][]*lr.Poly, n)
 	a2 := make([][]*lr.Poly, 3)
-	uniformSamplerQ := lr.NewUniformSampler(prng, crispCircuit.Rq)
+
 	//a1 coefficients
 	for i := 0; i < len(a1); i++ {
 		a1[i] = make([]*lr.Poly, 4)
 		for j := 0; j < len(a1[i]); j++ {
-			a1[i][j] = crispCircuit.Rq.NewPoly()
-			uniformSamplerQ.Read(a1[i][j])
+			a1[i][j] = crispCircuit.Rq.NewUniformPoly()
 		}
 	}
 
@@ -82,8 +79,7 @@ func runCrisp() {
 	for i := 0; i < len(a2); i++ {
 		a2[i] = make([]*lr.Poly, 1)
 		for j := 0; j < len(a2[i]); j++ {
-			a2[i][j] = crispCircuit.Rq.NewPoly()
-			uniformSamplerQ.Read(a2[i][j])
+			a2[i][j] = crispCircuit.Rq.NewUniformPoly()
 		}
 	}
 
@@ -217,5 +213,4 @@ func runCrisp() {
 	for i := 0; i < len(bdop2); i++ {
 		fmt.Println(crispCircuit.Rq.PolyToString(bdop2[i].RqValue)[0])
 	}
-
 }

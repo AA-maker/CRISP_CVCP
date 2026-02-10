@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"time"
-	"github.com/ldsec/lattigo/ckks"
+	"github.com/tuneinsight/lattigo/ckks"
 	"os"
     "io"
     "log"
@@ -120,7 +120,7 @@ t_csv := float64(t.Sub(start))/1000000.0
 
 ////////// Print parametrization
 start = time.Now()
-	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN(), ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
+	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, scale= %f, sigma = %f \n", ckkscontext.LogN, ckkscontext.LogQ(), ckkscontext.Levels(), ckkscontext.Scale(), ckkscontext.Sigma())
 	fmt.Printf("Values     : %6f -- %6f -- %6f -- %6f...\n", conso[0], conso[1], conso[2], conso[3])
 	fmt.Println()
 
@@ -187,7 +187,7 @@ t_dec := float64(t.Sub(start))/1000000.0
         fmt.Println(err)
         return
     }
-    newLine := file_str + "," + fmt.Sprintf("%d", ckkscontext.LogN()) + "," + fmt.Sprintf("%d", ckkscontext.LogQ()) + ","
+    newLine := file_str + "," + fmt.Sprintf("%d", ckkscontext.LogN) + "," + fmt.Sprintf("%d", ckkscontext.LogQ()) + ","
     newLine += fmt.Sprintf("%d", cnt) + "," + fmt.Sprintf("%6f", res_pt) + "," + fmt.Sprintf("%6f", real(valuesTest[0])) + "," + fmt.Sprintf("%6f", (real(valuesTest[0])-res_pt)/res_pt*100) + ","
     newLine += fmt.Sprintf("%2f", t_init) + "," + fmt.Sprintf("%2f", t_csv) + "," + fmt.Sprintf("%2f", t_enc) + "," + fmt.Sprintf("%2f", t_cmp) + "," + fmt.Sprintf("%2f", t_dec)
     _, err = fmt.Fprintln(f, newLine)

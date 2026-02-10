@@ -46,6 +46,7 @@ public:
 	//   KEYS GENERATION
 	//----------------------------------------------------------------------------------
 
+	void sqrt(Ciphertext& cipher, long logp);
 
 	void addEncKey(SecretKey& secretKey);
 
