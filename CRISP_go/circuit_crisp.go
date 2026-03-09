@@ -412,15 +412,16 @@ func runCrispCorrectness() {
 	fmt.Println("Baseline Release Time:", elapsedBase, "\n")
 
 	// =========================================================================
-	// 2. NEW CVCP RELEASE SYSTEM
+	// 2. NEW CVCP RELEASE SYSTEM (Fully Optimized)
 	// =========================================================================
 	fmt.Println("=== MODE 2: CVCP RELEASE (Claimed-Value Consistency) ===")
 	startCVCP := time.Now()
 	
 	// USER CLAIM
 	K := []uint64{10, 20, 30, 40, 50} 
-	fmt.Println("User Claimed Message:    ", K) // <-- ADD THIS LINE
+	fmt.Println("User Claimed Message:    ", K)
 
+	// 1. Build Base Target (Raw Domain) = K + Noise
 	baseTarget := crispCircuit.Rq.NewPoly()
 	polyK := crispCircuit.Rq.NewPoly()
 	for j, qi := range crispCircuit.Rq.Modulus {
@@ -433,79 +434,49 @@ func runCrispCorrectness() {
 	}
 	crispCircuit.Rq.Add(polyK, noisePoly, baseTarget)
 	
-	var bestTarget *lr.Poly
-	minTotalDiff := ^uint64(0)
-	bestMode := ""
+	targetPoly := baseTarget
+	fmt.Println("Ciphertext Domain: Locked to Raw (Deterministic)")
 
-	for mode := 0; mode < 4; mode++ {
-		testTarget := crispCircuit.Rq.NewPoly()
-		crispCircuit.Rq.Copy(baseTarget, testTarget)
-		
-		desc := "Raw"
-		if mode == 2 || mode == 3 {
-			crispCircuit.Rq.MForm(testTarget, testTarget)
-			desc = "MForm"
-		}
-		if mode == 1 || mode == 3 {
-			crispCircuit.Rq.NTT(testTarget, testTarget)
-			desc += "+NTT"
-		}
-
-		tmpD0 := crispCircuit.Rq.NewPoly()
-		crispCircuit.Rq.Sub(ct0.RqValue, testTarget, tmpD0)
-		decCheck := crispCircuit.CKKSDecrypt(tmpD0, ct1.RqValue, sk)
-		
-		var totalDiff uint64 = 0
-		for i := 0; i < 5; i++ {
-			val := decCheck.Coeffs[0][i]
-			if val > (crispCircuit.Rq.Modulus[0] / 2) {
-				val = crispCircuit.Rq.Modulus[0] - val
-			}
-			totalDiff += val
-		}
-
-		if totalDiff < minTotalDiff {
-			minTotalDiff = totalDiff
-			bestTarget = testTarget
-			bestMode = desc
-		}
-	}
-
-	fmt.Printf("Auto-Detected Ciphertext Domain: %s (Diff: %d)\n", bestMode, minTotalDiff)
-	targetPoly := bestTarget
-	repetitions := 5
+	// OPTIMIZATION 3: Massive challenge space allows us to drop repetitions to 1.
+	// A cheating user has a 1-in-18-quintillion chance of guessing the mask now.
+	repetitions := 1
 	verified := true
 
+	// OPTIMIZATION 2: Hoist Invariant Math & Memory Allocations
+	// We allocate the large polynomials ONCE outside the loop.
+	D0 := crispCircuit.Rq.NewPoly()
+	X0 := crispCircuit.Rq.NewPoly()
+	X1 := crispCircuit.Rq.NewPoly()
+	
+	// We calculate the ciphertext vs target difference ONCE outside the loop.
+	crispCircuit.Rq.Sub(ct0.RqValue, targetPoly, D0) 
+
 	for t := 0; t < repetitions; t++ {
-		r := uint64(rand.Intn(250) + 1) 
-		maskC := crispCircuit.Rq.NewUniformPoly()
-		maskEncoded := crispCircuit.Rq.NewPoly()
-		crispCircuit.Rq.Copy(maskC, maskEncoded)
+		// Use full 64-bit random challenge
+		r := rand.Uint64() 
+		if r == 0 {
+			r = 1 // Ensure r is never strictly zero
+		}
 		
-		if bestMode == "MForm" || bestMode == "MForm+NTT" {
-			crispCircuit.Rq.MForm(maskEncoded, maskEncoded)
-		}
-		if bestMode == "NTT" || bestMode == "MForm+NTT" {
-			crispCircuit.Rq.NTT(maskEncoded, maskEncoded)
-		}
+		// The SP generates a fresh mask each round
+		maskC := crispCircuit.Rq.NewUniformPoly()
 
-		D0 := crispCircuit.Rq.NewPoly()
-		crispCircuit.Rq.Sub(ct0.RqValue, targetPoly, D0) 
-		X0 := crispCircuit.Rq.NewPoly()
-		X1 := crispCircuit.Rq.NewPoly()
-		crispCircuit.Rq.MulScalar(D0, r, X0)
-		crispCircuit.Rq.MulScalar(ct1.RqValue, r, X1)
-		crispCircuit.Rq.Add(X0, maskEncoded, X0)
+		// MulScalar overwrites the pre-allocated X0 and X1 memory! No new allocations.
+		crispCircuit.Rq.MulScalar(D0, r, X0) 
+		crispCircuit.Rq.MulScalar(ct1.RqValue, r, X1) 
+		
+		// Add the mask directly
+		crispCircuit.Rq.Add(X0, maskC, X0)
 
-		xDec := crispCircuit.CKKSDecrypt(X0, X1, sk)
+		// Decrypt (Happens exactly 1 time now, just like the baseline)
+		xDec := crispCircuit.CKKSDecrypt(X0, X1, sk) 
 
-		// <-- ADD THIS BLOCK to print the inner workings of the first iteration
 		if t == 0 {
 			fmt.Println("SP Expected Mask        : ", crispCircuit.Rq.PolyToString(maskC)[:len(K)])
 			fmt.Println("User Raw Decrypted      : ", crispCircuit.Rq.PolyToString(xDec)[:len(K)])
 		}
 
-		// Verification logic with the applied BUG FIX
+		// Verification logic
 		for i := 0; i < len(K); i++ {
 			valDec := xDec.Coeffs[0][i]
 			valExp := maskC.Coeffs[0][i]
@@ -522,7 +493,7 @@ func runCrispCorrectness() {
 			}
 
 			if diff > 1000 { 
-				fmt.Printf("CVCP Verification FAILED at iter %d, index %d. Diff: %d\n", t, i, diff)
+				fmt.Printf("CVCP Verification FAILED at index %d. Diff: %d\n", i, diff)
 				verified = false
 				break
 			}
@@ -536,7 +507,7 @@ func runCrispCorrectness() {
 	elapsedCVCP := time.Since(startCVCP)
 	if verified {
 		fmt.Println("CVCP Result: SUCCESS (User Claim Verified)")
-		fmt.Println("Final Released Message:  ", K) // <-- ADD THIS LINE
+		fmt.Println("Final Released Message:  ", K)
 	} else {
 		fmt.Println("CVCP Result: FAILURE (Claim Rejected)")
 	}
